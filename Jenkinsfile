@@ -4,7 +4,6 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'renanthera/simple-app'
-        REGISTRY_CREDENTIALS = 'dockerhub-credentials'
     }
 
     stages {
@@ -30,19 +29,23 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: REGISTRY_CREDENTIALS,
+                        credentialsId: 'dockerhub-credentials',
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_TOKEN'
                     )
                 ]) {
                     bat '''
-                        echo %DOCKER_TOKEN% | docker login -u %DOCKER_USER% --password-stdin
+                        powershell -NoProfile -NonInteractive -Command "$env:DOCKER_TOKEN | docker login --username $env:DOCKER_USER --password-stdin; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }"
                         if errorlevel 1 exit /b 1
+
                         docker push %IMAGE_NAME%:%BUILD_NUMBER%
                         if errorlevel 1 exit /b 1
+
                         docker tag %IMAGE_NAME%:%BUILD_NUMBER% %IMAGE_NAME%:latest
                         if errorlevel 1 exit /b 1
+
                         docker push %IMAGE_NAME%:latest
+                        if errorlevel 1 exit /b 1
                     '''
                 }
             }
